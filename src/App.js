@@ -5,8 +5,6 @@ import {styled} from 'baseui';
 import {Scrubber} from "react-scrubber";
 import 'react-scrubber/lib/scrubber.css';
 
-import {Tabs, Tab} from 'baseui/tabs-motion';
-
 const es = new EventSource("/sse");
 
 const useAnimationFrame = callback => {
@@ -31,7 +29,7 @@ const useAnimationFrame = callback => {
 }
 
 const PlayControls = styled('div', {
-    marginRight: '1em',
+    marginLeft: '1em',
 })
 
 const AlbumInfoContainer = styled('div', {
@@ -46,13 +44,19 @@ const TrackTime = styled('div', {
     marginTop: '0.5em',
     marginRight: 0,
     marginBottom: '0.5em',
-    marginLeft: 0,
+    marginLeft: '0.5em',
+})
+
+const TrackProgress = styled('div', {
+    marginTop: '0.5em',
+    marginRight: 0,
+    marginBottom: '0.5em',
+    marginLeft: '0.5em',
+    width: '8em',
 })
 
 const VolumeScrubberContainer = styled('div', {
-    float: 'right',
-    height: '5em',
-    width: '1em'
+    width: '8em',
 })
 
 function secondsToMMSS(seconds) {
@@ -63,103 +67,117 @@ function secondsToMMSS(seconds) {
 }
 
 function HEOS() {
-  const [messages, setMessages] = useState([]);
-  const [players, setPlayers] = useState({});
-  const [activeKey, setActiveKey] = React.useState("0");
+    const [messages, setMessages] = useState([]);
+    const [players, setPlayers] = useState({});
+    const [activeKey, setActiveKey] = React.useState("0");
 
     useEffect(() => {
-      es.onmessage = function (event) {
-          setMessages([
-              ...messages,
-              event.data
-          ])
+        es.onmessage = function (event) {
+            setMessages([
+                ...messages,
+                event.data
+            ])
 
-          const data = JSON.parse(event.data);
-          const commandGroup = get(data, 'heos.command.commandGroup')
-          const command = get(data, 'heos.command.command')
-          if (commandGroup === "player" && command === "get_players") {
-              setPlayers(data.payload.reduce((playersObj, player) => {
-                  playersObj[player.pid] = player;
-                  return playersObj;
-              }, {}))
-              if (localStorage.getItem('activePlayerPid') !== null) {
-                  setActiveKey(localStorage.getItem('activePlayerPid'))
-              } else {
-                  setActiveKey(data.payload[0].pid)
-              }
-          }
-          if (commandGroup === "player" && command === "get_now_playing_media") {
-              const updatedPlayers = {...players};
-              updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
-                  ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
-                  ...data.payload
-              };
-              setPlayers(updatedPlayers)
-          }
-          if (commandGroup === "player" && command === "get_play_state") {
-              const updatedPlayers = {...players};
-              if (!updatedPlayers[data.heos.message.parsed.pid].nowPlaying) {
-                  updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
-                      pid: data.heos.message.parsed.pid
-                  };
-              }
-              updatedPlayers[data.heos.message.parsed.pid].nowPlaying.state = data.heos.message.parsed.state;
-              setPlayers(updatedPlayers)
-          }
-          if (commandGroup === "player" && command === "get_volume") {
-              const updatedPlayers = {...players};
-              updatedPlayers[data.heos.message.parsed.pid].nowPlaying.volume = data.heos.message.parsed.level;
-              setPlayers(updatedPlayers)
-          }
-          if (commandGroup === "event" && command === "player_now_playing_changed") {
-              const updatedPlayers = {...players};
-              updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
-                  ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
-                  ...data.heos.message.parsed
-              };
-              setPlayers(updatedPlayers)
-          }
-          if (commandGroup === "event" && command === "player_now_playing_progress") {
-              const updatedPlayers = {...players};
-              updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
-                  ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
-                  ...data.heos.message.parsed
-              };
-              setPlayers(updatedPlayers)
-          }
-          if (commandGroup === "event" && command === "player_state_changed") {
-              const updatedPlayers = {...players};
-              updatedPlayers[data.heos.message.parsed.pid].nowPlaying.state = data.heos.message.parsed.state;
-              setPlayers(updatedPlayers)
-          }
-          if (commandGroup === "event" && command === "player_volume_changed") {
-              const updatedPlayers = {...players};
-              updatedPlayers[data.heos.message.parsed.pid].nowPlaying.volume = data.heos.message.parsed.level;
-              setPlayers(updatedPlayers)
-          }
-      };
-  })
+            const data = JSON.parse(event.data);
+            const commandGroup = get(data, 'heos.command.commandGroup')
+            const command = get(data, 'heos.command.command')
+            const updatedPlayers = {...players};
 
-  return (
-      <Tabs
-          activeKey={activeKey}
-          onChange={({ activeKey }) => {
-              setActiveKey(activeKey);
-              localStorage.setItem('activePlayerPid', activeKey)
-          }}
-          activateOnFocus
-      >
-          {Object.values(players).map((player) => {
-              return (<Tab key={player.pid} title={player.name}><PlayerInfo player={player} /></Tab>)
-          })}
-      </Tabs>
-  );
+            if ("player" === commandGroup) {
+                switch (command) {
+                    case "get_players":
+                        setPlayers(data.payload.reduce((playersObj, player) => {
+                            playersObj[player.pid] = player;
+                            return playersObj;
+                        }, {}))
+
+                        if (localStorage.getItem('activePlayerPid') !== null) {
+                            setActiveKey(localStorage.getItem('activePlayerPid'))
+                        } else {
+                            setActiveKey(data.payload[0].pid);
+                        }
+                        break;
+
+                    case "get_now_playing_media":
+                        updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
+                            ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
+                            ...data.payload
+                        };
+                        setPlayers(updatedPlayers);
+                        break;
+
+                    case "get_play_state":
+                        if (!updatedPlayers[data.heos.message.parsed.pid].nowPlaying) {
+                            updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
+                                pid: data.heos.message.parsed.pid
+                            };
+                        }
+                        updatedPlayers[data.heos.message.parsed.pid].nowPlaying.state = data.heos.message.parsed.state;
+                        setPlayers(updatedPlayers);
+                        break;
+
+                    case "get_volume":
+                        updatedPlayers[data.heos.message.parsed.pid].nowPlaying.volume = data.heos.message.parsed.level;
+                        setPlayers(updatedPlayers);
+                        break;
+                }
+            } else if ("event" === commandGroup) {
+                switch (command) {
+                    case "player_now_playing_changed":
+                        updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
+                            ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
+                            ...data.heos.message.parsed
+                        };
+                        setPlayers(updatedPlayers);
+                        break;
+
+                    case "player_now_playing_progress":
+                        updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
+                            ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
+                            ...data.heos.message.parsed
+                        };
+                        setPlayers(updatedPlayers);
+                        break;
+
+                    case "player_state_changed":
+                        updatedPlayers[data.heos.message.parsed.pid].nowPlaying.state = data.heos.message.parsed.state;
+                        setPlayers(updatedPlayers);
+                        break;
+
+                    case "player_volume_changed":
+                        updatedPlayers[data.heos.message.parsed.pid].nowPlaying.volume = data.heos.message.parsed.level;
+                        setPlayers(updatedPlayers);
+                        break;
+                }
+            }
+        }
+    });
+
+    return (
+        <table>
+            {Object.values(players).map((player, idx) => {
+                return (
+                    <tr key={player.pid} title={player.name}>
+                        <td>{player.name}</td>
+                        <td>
+                            <PlayerInfo player={player}/>
+                        </td>
+                        {0 === idx &&
+                            <td rowSpan={Object.values(players).length}>
+                                <PlayerAlbumInfo player={Object.values(players)[0]}/>
+                            </td>
+                        }
+                    </tr>
+                )
+            })}
+        </table>
+    );
 }
 
 function SongMetadata({nowPlaying}) {
     return (
         <SongMetadataContainer>
-            <strong>{nowPlaying.song}</strong><br />
+            <strong>{nowPlaying.song}</strong><br/>
             {nowPlaying.artist} · {nowPlaying.album}
         </SongMetadataContainer>
     );
@@ -189,7 +207,8 @@ function Position({nowPlaying}) {
     const [playState, setPlayState] = React.useState()
     const [isScrubbing, setIsScrubbing] = React.useState(false)
     const [position, setPosition] = React.useState(null)
-    const duration = nowPlaying.duration/1000 || 0
+    const duration = nowPlaying.duration / 1000 || 0
+
     if (!isScrubbing) {
         if (position === null && nowPlaying.cur_pos !== 0) {
             setPosition(nowPlaying.cur_pos / 1000)
@@ -211,7 +230,7 @@ function Position({nowPlaying}) {
                 if (!prevPosition) {
                     return null
                 }
-                const newTime = prevPosition + deltaTime/1000
+                const newTime = prevPosition + deltaTime / 1000
                 return newTime
             })
         }
@@ -238,21 +257,56 @@ function Position({nowPlaying}) {
         <>
             <div style={{display: 'flex'}}>
                 <PlayControls>
-                    <a href="#" onClick={(evt) => {evt.preventDefault(); previousTrack(nowPlaying.pid);}}>⏮️️</a>
-                    {playState === "play" && <a href="#" onClick={(evt) => {evt.preventDefault(); pauseTrack(nowPlaying.pid);}}>⏸</a>}
-                    {(playState === "stop" || playState === "pause") && <a href="#" onClick={(evt) => {evt.preventDefault(); playTrack(nowPlaying.pid);}}>▶️️</a>}
-                    <a href="#" onClick={(evt) => {evt.preventDefault(); nextTrack(nowPlaying.pid);}}>⏭️</a>
+                    <a href="#" onClick={(evt) => {
+                        evt.preventDefault();
+                        previousTrack(nowPlaying.pid);
+                    }}>⏮️️</a>
+                    {playState === "play" && <a href="#" onClick={(evt) => {
+                        evt.preventDefault();
+                        pauseTrack(nowPlaying.pid);
+                    }}>⏸</a>}
+                    {(playState === "stop" || playState === "pause") && <a href="#" onClick={(evt) => {
+                        evt.preventDefault();
+                        playTrack(nowPlaying.pid);
+                    }}>▶️️</a>}
+                    <a href="#" onClick={(evt) => {
+                        evt.preventDefault();
+                        nextTrack(nowPlaying.pid);
+                    }}>⏭️</a>
+
                 </PlayControls>
                 <TrackTime>{secondsToMMSS(position)} / {secondsToMMSS(duration)}</TrackTime>
+                <TrackProgress>
+                    <Scrubber
+                        min={0}
+                        max={duration}
+                        value={position}
+                        onScrubStart={handleScrubStart}
+                        onScrubChange={handleScrubChange}
+                        onScrubEnd={handleScrubEnd}
+                    />
+                </TrackProgress>
             </div>
-            <Scrubber
-                min={0}
-                max={duration}
-                value={position}
-                onScrubStart={handleScrubStart}
-                onScrubChange={handleScrubChange}
-                onScrubEnd={handleScrubEnd}
-            />
+
+        </>
+    )
+}
+
+function PlayerAlbumInfo({player}) {
+    if (!player || !player.nowPlaying) {
+        return null;
+    }
+
+    return (
+        <>
+            <AlbumInfoContainer>
+                <img width="200px" height="200px" alt={`${player.nowPlaying.artist} - ${player.nowPlaying.album}`}
+                     src={player.nowPlaying.image_url}/>
+                <div>
+                    <SongMetadata nowPlaying={player.nowPlaying}/>
+                    <Position nowPlaying={player.nowPlaying}/>
+                </div>
+            </AlbumInfoContainer>
         </>
     )
 }
@@ -260,9 +314,11 @@ function Position({nowPlaying}) {
 function PlayerInfo({player}) {
     const [isScrubbing, setIsScrubbing] = React.useState(false)
     const [volume, setVolume] = React.useState(undefined)
+
     if (!player.nowPlaying) {
         return null;
     }
+
     if (!isScrubbing && volume !== player.nowPlaying.volume) {
         setVolume(player.nowPlaying.volume);
     }
@@ -281,11 +337,12 @@ function PlayerInfo({player}) {
         setPlayerVolume(player.pid, value);
         setVolume(value)
     }
+
     return (
         <>
             <VolumeScrubberContainer>
                 <Scrubber
-                    vertical={true}
+                    className="volume"
                     min={0}
                     max={100}
                     value={volume}
@@ -294,22 +351,16 @@ function PlayerInfo({player}) {
                     onScrubEnd={handleVolumeScrubEnd}
                 />
             </VolumeScrubberContainer>
-            <AlbumInfoContainer>
-                <img alt={`${player.nowPlaying.artist} - ${player.nowPlaying.album}`} src={player.nowPlaying.image_url} />
-                <SongMetadata nowPlaying={player.nowPlaying} />
-            </AlbumInfoContainer>
-
-            <Position nowPlaying={player.nowPlaying} />
         </>
     )
 }
 
 function App() {
-  return (
-    <div className="App">
-      <HEOS />
-    </div>
-  );
+    return (
+        <div className="App">
+            <HEOS/>
+        </div>
+    );
 }
 
 export default App;

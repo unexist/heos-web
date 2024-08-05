@@ -80,6 +80,7 @@ app
                 ctx.sse.end();
             }
         };
+
         heosConnection.write('player', 'get_players')
 
         heosEmitter.on("heosEvt", listener);
