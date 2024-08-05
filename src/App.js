@@ -155,7 +155,7 @@ function HEOS() {
 
     return (
         <table>
-            {Object.values(players).map((player, idx) => {
+            {Object.values(players).sort((p1, p2) => p1.name < p2.name ? -1 : 1).map((player, idx) => {
                 return (
                     <tr key={player.pid} title={player.name}>
                         <td>{player.name}</td>
@@ -273,7 +273,6 @@ function Position({nowPlaying}) {
                         evt.preventDefault();
                         nextTrack(nowPlaying.pid);
                     }}>⏭️</a>
-
                 </PlayControls>
                 <TrackTime>{secondsToMMSS(position)} / {secondsToMMSS(duration)}</TrackTime>
                 <TrackProgress>
@@ -342,15 +341,16 @@ function PlayerInfo({player}) {
         <>
             <VolumeScrubberContainer>
                 <Scrubber
-                    className="volume"
                     min={0}
                     max={100}
                     value={volume}
+                    markers={[50]}
                     onScrubStart={handleVolumeScrubStart}
                     onScrubChange={handleVolumeScrubChange}
                     onScrubEnd={handleVolumeScrubEnd}
                 />
             </VolumeScrubberContainer>
+            <span>{volume}</span>
         </>
     )
 }
