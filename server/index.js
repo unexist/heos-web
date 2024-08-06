@@ -9,7 +9,8 @@ const heos = require('heos-api')
 
 let heosConnection = null
 
-class HeosEmitter extends EventEmitter {}
+class HeosEmitter extends EventEmitter {
+}
 
 const heosEmitter = new HeosEmitter();
 
@@ -57,7 +58,7 @@ heos.discoverAndConnect().then(connection => {
             }
         )
         .write('system', 'register_for_change_events', {enable: 'on'})
-        .write('system', 'prettify_json_response', { enable: 'on' })
+        .write('system', 'prettify_json_response', {enable: 'on'})
 })
 
 
