@@ -200,22 +200,20 @@ function PlayerButton({icon, clickFunc}) {
 
 function PlayerControls({player}) {
     function nextTrack(pid) {
-        fetch(`next?pid=${pid}`)
+        fetch(`next?pid=${pid}`);
     }
 
     function previousTrack(pid) {
-        fetch(`previous?pid=${pid}`)
+        fetch(`previous?pid=${pid}`);
     }
 
     function pauseTrack(pid) {
-        fetch(`pause?pid=${pid}`)
+        fetch(`pause?pid=${pid}`);
     }
 
     function playTrack(pid) {
-        fetch(`play?pid=${pid}`)
+        fetch(`play?pid=${pid}`);
     }
-
-    console.dir(player);
 
     return (
         <>
@@ -242,25 +240,24 @@ function PlayerControls({player}) {
 }
 
 function Position({player}) {
-
     const [playState, setPlayState] = React.useState();
     const [isScrubbing, setIsScrubbing] = React.useState(false);
     const [position, setPosition] = React.useState(null);
     var duration = 0;
 
-    if (player && player.nowPlayling) {
+    if (player && player.nowPlaying) {
         duration = player.nowPlaying.duration / 1000 || 0;
 
         if (!isScrubbing) {
             if (position === null && player.nowPlaying.cur_pos !== 0) {
-                setPosition( player.nowPlaying.cur_pos / 1000)
+                setPosition(player.nowPlaying.cur_pos / 1000);
             }
-            if (player.nowPlaying.cur_pos && Math.abs( player.nowPlaying.cur_pos / 1000 - position) > 10) {
-                setPosition( player.nowPlaying.cur_pos / 1000)
+            if (player.nowPlaying.cur_pos && Math.abs(player.nowPlaying.cur_pos / 1000 - position) > 10) {
+                setPosition(player.nowPlaying.cur_pos / 1000);
             }
             if (player.nowPlaying.state && player.nowPlaying.state !== playState) {
-                setPlayState(player.nowPlaying.state)
-                setPosition(player.nowPlaying.cur_pos / 1000)
+                setPlayState(player.nowPlaying.state);
+                setPosition(player.nowPlaying.cur_pos / 1000);
             }
         }
     }
@@ -271,10 +268,11 @@ function Position({player}) {
         if (!isScrubbing && playState !== "pause") {
             setPosition((prevPosition) => {
                 if (!prevPosition) {
-                    return null
+                    return null;
                 }
-                const newTime = prevPosition + deltaTime / 1000
-                return newTime
+                const newTime = prevPosition + deltaTime / 1000 ;
+
+                return newTime;
             })
         }
     }, [isScrubbing, playState])
@@ -284,12 +282,12 @@ function Position({player}) {
     }
 
     function handleScrubChange(value) {
-        setIsScrubbing(true)
-        setPosition(value)
+        setIsScrubbing(true);
+        setPosition(value);
     }
 
     function handleScrubEnd(value) {
-        setIsScrubbing(false)
+        setIsScrubbing(false);
     }
 
     return (
