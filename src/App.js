@@ -32,6 +32,10 @@ const PlayControls = styled('div', {
     marginLeft: '1em',
 })
 
+const PlayControl = styled('div', {
+    marginLeft: '1em',
+})
+
 const AlbumInfoContainer = styled('div', {
     display: 'flex'
 })
@@ -160,11 +164,13 @@ function HEOS() {
                     <tr key={player.pid} title={player.name}>
                         <td>{player.name}</td>
                         <td>
-                            <PlayerInfo player={player}/>
+                            <PlayerVolume player={player}/>
                         </td>
                         {0 === idx &&
                             <td rowSpan={Object.values(players).length}>
-                                <PlayerAlbumInfo player={Object.values(players)[0]}/>
+                                <PlayerMetadata player={player}/>
+                                <Position player={player}/>
+                                <PlayerControls player={player}/>
                             </td>
                         }
                     </tr>
@@ -174,51 +180,88 @@ function HEOS() {
     );
 }
 
-function SongMetadata({nowPlaying}) {
+function SongMetadata({player}) {
     return (
         <SongMetadataContainer>
-            <strong>{nowPlaying.song}</strong><br/>
-            {nowPlaying.artist} · {nowPlaying.album}
+            <strong>{player.song}</strong><br/>
+            {player.artist} · {player.album}
         </SongMetadataContainer>
     );
 }
 
-function nextTrack(pid) {
-    fetch(`next?pid=${pid}`)
+function PlayerButton({icon, clickFunc}) {
+    return (
+        <a href="#" onClick={(evt) => {
+            evt.preventDefault();
+            clickFunc();
+        }}>{icon}</a>
+    )
 }
 
-function previousTrack(pid) {
-    fetch(`previous?pid=${pid}`)
+function PlayerControls({player}) {
+    function nextTrack(pid) {
+        fetch(`next?pid=${pid}`)
+    }
+
+    function previousTrack(pid) {
+        fetch(`previous?pid=${pid}`)
+    }
+
+    function pauseTrack(pid) {
+        fetch(`pause?pid=${pid}`)
+    }
+
+    function playTrack(pid) {
+        fetch(`play?pid=${pid}`)
+    }
+
+    console.dir(player);
+
+    return (
+        <>
+            <div style={{display: 'flex'}}>
+                <PlayerButton icon="⏮️️" clickFunc={() => {
+                    previousTrack(player.pid);
+                }}/>
+                {player.nowPlaying && player.nowPlaying.state === "play"
+                    && <PlayerButton icon="⏸️️️" clickFunc={() => {
+                        pauseTrack(player.pid);
+                    }}/>
+                }
+                {(player.nowPlaying && (player.nowPlaying.state === "stop" || player.nowPlaying.state === "pause"))
+                    && <PlayerButton icon="▶️" clickFunc={() => {
+                        playTrack(player.pid);
+                    }}/>
+                }
+                <PlayerButton icon="⏭️" clickFunc={() => {
+                        nextTrack(player.pid);
+                }}/>
+            </div>
+        </>
+    )
 }
 
-function pauseTrack(pid) {
-    fetch(`pause?pid=${pid}`)
-}
+function Position({player}) {
 
-function playTrack(pid) {
-    fetch(`play?pid=${pid}`)
-}
+    const [playState, setPlayState] = React.useState();
+    const [isScrubbing, setIsScrubbing] = React.useState(false);
+    const [position, setPosition] = React.useState(null);
+    var duration = 0;
 
-function setPlayerVolume(pid, level) {
-    fetch(`set_volume?pid=${pid}&level=${level}`)
-}
+    if (player && player.nowPlayling) {
+        duration = player.nowPlaying.duration / 1000 || 0;
 
-function Position({nowPlaying}) {
-    const [playState, setPlayState] = React.useState()
-    const [isScrubbing, setIsScrubbing] = React.useState(false)
-    const [position, setPosition] = React.useState(null)
-    const duration = nowPlaying.duration / 1000 || 0
-
-    if (!isScrubbing) {
-        if (position === null && nowPlaying.cur_pos !== 0) {
-            setPosition(nowPlaying.cur_pos / 1000)
-        }
-        if (nowPlaying.cur_pos && Math.abs(nowPlaying.cur_pos / 1000 - position) > 10) {
-            setPosition(nowPlaying.cur_pos / 1000)
-        }
-        if (nowPlaying.state && nowPlaying.state !== playState) {
-            setPlayState(nowPlaying.state)
-            setPosition(nowPlaying.cur_pos / 1000)
+        if (!isScrubbing) {
+            if (position === null && player.nowPlaying.cur_pos !== 0) {
+                setPosition( player.nowPlaying.cur_pos / 1000)
+            }
+            if (player.nowPlaying.cur_pos && Math.abs( player.nowPlaying.cur_pos / 1000 - position) > 10) {
+                setPosition( player.nowPlaying.cur_pos / 1000)
+            }
+            if (player.nowPlaying.state && player.nowPlaying.state !== playState) {
+                setPlayState(player.nowPlaying.state)
+                setPosition(player.nowPlaying.cur_pos / 1000)
+            }
         }
     }
 
@@ -236,10 +279,6 @@ function Position({nowPlaying}) {
         }
     }, [isScrubbing, playState])
 
-    if (!nowPlaying.duration) {
-        // return null;
-    }
-
     function handleScrubStart(value) {
         setIsScrubbing(true)
     }
@@ -255,43 +294,22 @@ function Position({nowPlaying}) {
 
     return (
         <>
-            <div style={{display: 'flex'}}>
-                <PlayControls>
-                    <a href="#" onClick={(evt) => {
-                        evt.preventDefault();
-                        previousTrack(nowPlaying.pid);
-                    }}>⏮️️</a>
-                    {playState === "play" && <a href="#" onClick={(evt) => {
-                        evt.preventDefault();
-                        pauseTrack(nowPlaying.pid);
-                    }}>⏸</a>}
-                    {(playState === "stop" || playState === "pause") && <a href="#" onClick={(evt) => {
-                        evt.preventDefault();
-                        playTrack(nowPlaying.pid);
-                    }}>▶️️</a>}
-                    <a href="#" onClick={(evt) => {
-                        evt.preventDefault();
-                        nextTrack(nowPlaying.pid);
-                    }}>⏭️</a>
-                </PlayControls>
+            <TrackProgress>
+                <Scrubber
+                    min={0}
+                    max={duration}
+                    value={position}
+                    onScrubStart={handleScrubStart}
+                    onScrubChange={handleScrubChange}
+                    onScrubEnd={handleScrubEnd}
+                />
                 <TrackTime>{secondsToMMSS(position)} / {secondsToMMSS(duration)}</TrackTime>
-                <TrackProgress>
-                    <Scrubber
-                        min={0}
-                        max={duration}
-                        value={position}
-                        onScrubStart={handleScrubStart}
-                        onScrubChange={handleScrubChange}
-                        onScrubEnd={handleScrubEnd}
-                    />
-                </TrackProgress>
-            </div>
-
+            </TrackProgress>
         </>
     )
 }
 
-function PlayerAlbumInfo({player}) {
+function PlayerMetadata({player}) {
     if (!player || !player.nowPlaying) {
         return null;
     }
@@ -302,15 +320,14 @@ function PlayerAlbumInfo({player}) {
                 <img width="200px" height="200px" alt={`${player.nowPlaying.artist} - ${player.nowPlaying.album}`}
                      src={player.nowPlaying.image_url}/>
                 <div>
-                    <SongMetadata nowPlaying={player.nowPlaying}/>
-                    <Position nowPlaying={player.nowPlaying}/>
+                    <SongMetadata player={player.nowPlaying}/>
                 </div>
             </AlbumInfoContainer>
         </>
     )
 }
 
-function PlayerInfo({player}) {
+function PlayerVolume({player}) {
     const [isScrubbing, setIsScrubbing] = React.useState(false)
     const [volume, setVolume] = React.useState(undefined)
 
@@ -320,6 +337,10 @@ function PlayerInfo({player}) {
 
     if (!isScrubbing && volume !== player.nowPlaying.volume) {
         setVolume(player.nowPlaying.volume);
+    }
+
+    function setPlayerVolume(pid, level) {
+        fetch(`set_volume?pid=${pid}&level=${level}`)
     }
 
     function handleVolumeScrubStart(value) {
