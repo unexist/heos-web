@@ -29,33 +29,28 @@ const useAnimationFrame = callback => {
 }
 
 const PlayControls = styled('div', {
-    marginLeft: '1em',
 })
 
 const PlayControl = styled('div', {
-    marginLeft: '1em',
+})
+
+const SongMetadataContainer = styled('div', {
 })
 
 const AlbumInfoContainer = styled('div', {
     display: 'flex'
 })
 
-const SongMetadataContainer = styled('div', {
-    marginLeft: '1em',
-})
-
 const TrackTime = styled('div', {
     marginTop: '0.5em',
     marginRight: 0,
     marginBottom: '0.5em',
-    marginLeft: '0.5em',
 })
 
 const TrackProgress = styled('div', {
     marginTop: '0.5em',
     marginRight: 0,
     marginBottom: '0.5em',
-    marginLeft: '0.5em',
     width: '8em',
 })
 
@@ -103,6 +98,8 @@ function HEOS() {
                         break;
 
                     case "get_now_playing_media":
+                        if (!updatedPlayers[data.heos.message.parsed.pid]) return;
+
                         updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
                             ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
                             ...data.payload
@@ -111,6 +108,8 @@ function HEOS() {
                         break;
 
                     case "get_play_state":
+                        if (!updatedPlayers[data.heos.message.parsed.pid]) return;
+
                         if (!updatedPlayers[data.heos.message.parsed.pid].nowPlaying) {
                             updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
                                 pid: data.heos.message.parsed.pid
@@ -121,6 +120,8 @@ function HEOS() {
                         break;
 
                     case "get_volume":
+                        if (!updatedPlayers[data.heos.message.parsed.pid]) return;
+
                         updatedPlayers[data.heos.message.parsed.pid].nowPlaying.volume = data.heos.message.parsed.level;
                         setPlayers(updatedPlayers);
                         break;
@@ -128,6 +129,8 @@ function HEOS() {
             } else if ("event" === commandGroup) {
                 switch (command) {
                     case "player_now_playing_changed":
+                        if (!updatedPlayers[data.heos.message.parsed.pid]) return;
+
                         updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
                             ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
                             ...data.heos.message.parsed
@@ -136,6 +139,8 @@ function HEOS() {
                         break;
 
                     case "player_now_playing_progress":
+                        if (!updatedPlayers[data.heos.message.parsed.pid]) return;
+
                         updatedPlayers[data.heos.message.parsed.pid].nowPlaying = {
                             ...updatedPlayers[data.heos.message.parsed.pid].nowPlaying,
                             ...data.heos.message.parsed
@@ -144,11 +149,15 @@ function HEOS() {
                         break;
 
                     case "player_state_changed":
+                        if (!updatedPlayers[data.heos.message.parsed.pid]) return;
+
                         updatedPlayers[data.heos.message.parsed.pid].nowPlaying.state = data.heos.message.parsed.state;
                         setPlayers(updatedPlayers);
                         break;
 
                     case "player_volume_changed":
+                        if (!updatedPlayers[data.heos.message.parsed.pid]) return;
+
                         updatedPlayers[data.heos.message.parsed.pid].nowPlaying.volume = data.heos.message.parsed.level;
                         setPlayers(updatedPlayers);
                         break;
@@ -166,25 +175,48 @@ function HEOS() {
                         <td>
                             <PlayerVolume player={player}/>
                         </td>
-                        {0 === idx &&
+                        {0 === idx && (
                             <td rowSpan={Object.values(players).length}>
-                                <PlayerMetadata player={player}/>
-                                <Position player={player}/>
+                                <AlbumMetadata player={player}/>
+                            </td>
+                        )}
+                        {0 === idx && (
+                            <td rowSpan={Object.values(players).length}>
+                                <SongMetadata player={player}/>
+                                <PlayerPosition player={player}/>
                                 <PlayerControls player={player}/>
                             </td>
-                        }
+                        )}
                     </tr>
                 )
             })}
         </table>
     );
 }
+function AlbumMetadata({player}) {
+    if (!player || !player.nowPlaying) {
+        return null;
+    }
+
+    return (
+        <>
+            <AlbumInfoContainer>
+                <img width="200px" height="200px" alt={`${player.nowPlaying.artist} - ${player.nowPlaying.album}`}
+                     src={player.nowPlaying.image_url}/>
+            </AlbumInfoContainer>
+        </>
+    )
+}
 
 function SongMetadata({player}) {
+    if (!player || !player.nowPlaying) {
+        return null;
+    }
+
     return (
         <SongMetadataContainer>
-            <strong>{player.song}</strong><br/>
-            {player.artist} · {player.album}
+            <strong>{player.nowPlaying.song}</strong><br/>
+            {player.nowPlaying.artist} · {player.nowPlaying.album}
         </SongMetadataContainer>
     );
 }
@@ -239,7 +271,7 @@ function PlayerControls({player}) {
     )
 }
 
-function Position({player}) {
+function PlayerPosition({player}) {
     const [playState, setPlayState] = React.useState();
     const [isScrubbing, setIsScrubbing] = React.useState(false);
     const [position, setPosition] = React.useState(null);
@@ -303,24 +335,6 @@ function Position({player}) {
                 />
                 <TrackTime>{secondsToMMSS(position)} / {secondsToMMSS(duration)}</TrackTime>
             </TrackProgress>
-        </>
-    )
-}
-
-function PlayerMetadata({player}) {
-    if (!player || !player.nowPlaying) {
-        return null;
-    }
-
-    return (
-        <>
-            <AlbumInfoContainer>
-                <img width="200px" height="200px" alt={`${player.nowPlaying.artist} - ${player.nowPlaying.album}`}
-                     src={player.nowPlaying.image_url}/>
-                <div>
-                    <SongMetadata player={player.nowPlaying}/>
-                </div>
-            </AlbumInfoContainer>
         </>
     )
 }
